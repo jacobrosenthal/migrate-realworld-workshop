@@ -175,3 +175,89 @@ Since our `agent.re` file contains the same code as the top of our `agent.js` fi
   
 
 ```
+## Convert methods
+
+As previously mentioned, any defined variables or methods will be exported by default. This allows us to pull individual methods into our Reason code and then import them into our JS.
+
+Here, we pull the `responseBody` method into our Reason code. By using the `##body` syntax, Reason will infer that the argument to the function is of type `Js.t(< body: 'c, .. >)` which really just means that it must receive a JS object with the property `body` that has a value of any type.
+
+We then import the `responseBody` method into our JS code and continue to use it the same way as before. If you haven't done so yet, now would be a good time to review the generated file `agent.bs.js` to see how all of this is compiling out. A goal of BuckleScript is to have readable output so hopefully you'll be able to mentally translate the output to your Reason code.
+
+📄 src/agent.js
+```diff
+- import { superagent } from "./agent.bs.js";
++ import { superagent, responseBody } from "./agent.bs.js";
+  
+  const API_ROOT = 'https://conduit.productionready.io/api';
+  
+  const encode = encodeURIComponent;
+- const responseBody = res => res.body;
+  
+  let token = null;
+  const tokenPlugin = req => {
+
+```
+📄 src/agent.re
+```diff
+  [@bs.module] external superagent_: superagent = "superagent";
+  
+  let superagent = superagentPromise(superagent_, promise);
++ 
++ let responseBody = res => res##body;
+
+```
+Moving `tokenPlugin` and `setToken` into our Reason code showcases optional values and mutations.
+
+In Reason, we use "optional" values instead of `null` or `undefined` and the compiler will ensure we check whether we have `Some(data)` or `None`. When the application starts, we have `None` but what's this `ref()` thing? A `ref` is a language feature that allows us to create mutable variables.
+
+We create the `token` variable as a mutable variable that starts as a `None` value.
+
+Then, we need to rewrite the `tokenPlugin` a little bit. We change the if-statement to a `switch` that matches on `token^`. The caret after `token` means that we want to access the mutable value (it "unwraps" it from the `ref`). Our `switch` then compares the value to `Some(token)` or `None`, and if we have a token, it calls the `set` method on the `req` argument. If `token` is `None`, we need the statement `()` which is Reason's "non-value", usually called `unit` - this is because every code branch must return something and Reason has implicit returns.
+
+Since we have a mutable value inside our Reason code, we also need to move the `setToken` method from our JS code into our Reason code. This method will be using the `:=` operator to set a mutable value. You'll also notice that we wrap the passed `_token` in `Some` to indicate that we now have some data assigned as `token`.
+
+Once all that is done, you can import the `tokenPlugin` and `setToken` functions into your JS module and replace the JS implementations.
+
+📄 src/agent.js
+```diff
+- import { superagent, responseBody } from "./agent.bs.js";
++ import { superagent, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
+  
+  const API_ROOT = 'https://conduit.productionready.io/api';
+  
+  const encode = encodeURIComponent;
+  
+- let token = null;
+- const tokenPlugin = req => {
+-   if (token) {
+-     req.set('authorization', `Token ${token}`);
+-   }
+- }
+- 
+  const requests = {
+    del: url =>
+      superagent.del(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
+    Comments,
+    Profile,
+    Tags,
+-   setToken: _token => { token = _token; }
++   setToken,
+  };
+
+```
+📄 src/agent.re
+```diff
+  let superagent = superagentPromise(superagent_, promise);
+  
+  let responseBody = res => res##body;
++ 
++ let token = ref(None);
++ let tokenPlugin = req =>
++   switch (token^) {
++   | Some(token) => req##set("authorization", "Token " ++ token)
++   | None => ()
++   };
++ 
++ let setToken = _token => token := Some(_token);
+
+```
