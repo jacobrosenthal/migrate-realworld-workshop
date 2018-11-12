@@ -1,9 +1,8 @@
-import { superagent } from "./agent.bs.js";
+import { superagent, responseBody } from "./agent.bs.js";
 
 const API_ROOT = 'https://conduit.productionready.io/api';
 
 const encode = encodeURIComponent;
-const responseBody = res => res.body;
 
 let token = null;
 const tokenPlugin = req => {
