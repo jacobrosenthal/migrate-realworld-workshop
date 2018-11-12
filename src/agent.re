@@ -8,3 +8,5 @@ type globalPromise;
 external superagentPromise: (superagent, globalPromise) => client =
   "superagent-promise";
 [@bs.module] external superagent_: superagent = "superagent";
+
+let superagent = superagentPromise(superagent_, promise);
