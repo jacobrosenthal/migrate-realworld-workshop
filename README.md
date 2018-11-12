@@ -62,3 +62,116 @@ This command will also generate a `.vscode/` directory and a `src/Demo.re` file,
 }
 
 ```
+The project already uses es6 imports, so let's make sure our generated code also uses es6 imports by changing the bsconfig `module` mode to `"es6"`.
+
+📄 bsconfig.json
+```diff
+      "subdirs" : true
+    },
+    "package-specs": {
+-     "module": "commonjs",
++     "module": "es6",
+      "in-source": true
+    },
+    "suffix": ".bs.js",
+
+```
+## Converting a utility module
+
+The easiest way to begin introducing Reason is to convert utility modules, keeping their external interface the same.
+
+Here, we're starting with our `agent.js` file.
+
+We can begin by pulling out the `superagent` imports into our `agent.re` file.
+
+
+### Abstract types
+
+Abstract types, or types that don't have any definition, will often be used when we are working with external APIs. In this commit, we've defined abstract types for the global `Promise` namespace (`type globalPromise`), the `superagent` namespace that we import and the superagent `client` returned by combining the `superagent` and `globalPromise` namespaces with the `superagentPromise` module.
+
+I like to think of an abstract type as "This thing exists but I don't care what it is".
+
+📄 src/agent.re
+```re
+type superagent;
+type client;
+type globalPromise;
+
+```
+### Externals
+
+Externals are the way we specify a non-Reason interface and tell the compiler what the inputs and outputs will be. Every `external` is erased at compile-time and get converted to plain JavaScript calls in the output.
+
+BuckleScript provides a variety of attributes to add to `external` declarations, including `[@bs.module]` for importing JavaScript modules, `[@bs.val]` for referencing a static value or method, and `[@bs.scope]` for working with dot-separated namespaces.
+
+The syntax for externals looks like this `[attributes] external functionName: (firstArgumentType, secondArgumentType) => returnType = "javascriptNameToBindTo"`.
+If you are binding to a value, it looks like `[attributes] external valueName: valueType = "javascriptNameToBindTo".
+If you are binding to a module, you can use `[@bs.module] external defaultImportName: importType = "module-name".
+
+📄 src/agent.re
+```diff
+  type superagent;
+  type client;
+  type globalPromise;
++ 
++ [@bs.scope "global"] [@bs.val] external promise: globalPromise = "Promise";
++ 
++ [@bs.module]
++ external superagentPromise: (superagent, globalPromise) => client =
++   "superagent-promise";
++ [@bs.module] external superagent_: superagent = "superagent";
+
+```
+### Combining everything
+
+Now that we have some abstract types and externals to bind our modules, we can combine everything into an export. If we don't add a `let valueName =` statement, our file will be empty because we've only defined externals that all get erased at compile time.
+
+Because we defined all our APIs with abstract types, we can glue everything together and assign to our `superagent` variable. By default, all variables defined by `let` will be exported from the generated module.
+
+📄 src/agent.re
+```diff
+  external superagentPromise: (superagent, globalPromise) => client =
+    "superagent-promise";
+  [@bs.module] external superagent_: superagent = "superagent";
++ 
++ let superagent = superagentPromise(superagent_, promise);
+
+```
+## Ignore
+
+At this point, you're probably noticing a few generated items, including:
+* a `.merlin` file
+* a `lib/` directory
+* a `src/agent.bs.js` file
+
+Let's gitignore all these now.
+
+📄 .gitignore
+```diff
+  .DS_Store
+  .env
+  npm-debug.log
+- .idea+ .idea
++ 
++ # ReasonML
++ .merlin
++ lib/
++ *.bs.js
+
+```
+## Use our Reason code from JS
+
+Since our `agent.re` file contains the same code as the top of our `agent.js` file, we can replace those lines with an `import` of our generated code. Notice the `.bs.js` in the import, that avoids node's resolution strategy and will load our generated code.
+
+📄 src/agent.js
+```diff
+- import superagentPromise from 'superagent-promise';
+- import _superagent from 'superagent';
+- 
+- const superagent = superagentPromise(_superagent, global.Promise);
++ import { superagent } from "./agent.bs.js";
+  
+  const API_ROOT = 'https://conduit.productionready.io/api';
+  
+
+```
