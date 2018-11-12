@@ -12,3 +12,12 @@ external superagentPromise: (superagent, globalPromise) => client =
 let superagent = superagentPromise(superagent_, promise);
 
 let responseBody = res => res##body;
+
+let token = ref(None);
+let tokenPlugin = req =>
+  switch (token^) {
+  | Some(token) => req##set("authorization", "Token " ++ token)
+  | None => ()
+  };
+
+let setToken = _token => token := Some(_token);
