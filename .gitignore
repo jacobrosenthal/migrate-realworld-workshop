@@ -14,3 +14,8 @@ build
 .env
 npm-debug.log
 .idea
+
+# ReasonML
+.merlin
+lib/
+*.bs.js
