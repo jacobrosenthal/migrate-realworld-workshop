@@ -261,3 +261,228 @@ Once all that is done, you can import the `tokenPlugin` and `setToken` functions
 + let setToken = _token => token := Some(_token);
 
 ```
+## Method chaining
+
+Next, we'll begin converting the "requests" helpers as defined in `agent.js`.
+
+But first, we'll pull in the `API_ROOT` constant. Reason reserves leading uppercase characters for Variant constructors so `API_ROOT` is renamed to `apiRoot` in `agent.re`.
+
+📄 src/agent.re
+```diff
+  
+  let superagent = superagentPromise(superagent_, promise);
+  
++ let apiRoot = "https://conduit.productionready.io/api";
++ 
+  let responseBody = res => res##body;
+  
+  let token = ref(None);
+
+```
+The superagent API is what people refer to as a "chaining" API - you've probably noticed the `.get().use().then()` syntax in the `agent.js` file.
+
+We can represent these types of APIs in Reason using the `[@bs.send]` attribute combined with the Fast Pipe (`->`) operator. Fast Pipe inserts the results of a statement as the first argument to the next function in the chain. A "chaining" API will always return itself, which is `client` in our case.
+
+For these externals, the empty string at the end indicates the method being called has the same name as our external. Note that `then` is a reserved word so we renamed it to `then_` and had to indicate the JS name is `"then"`.
+
+In our `use` and `then_` externals, we've taken a shortcut by using generics (`'request` and `'response`) to indicate that the functions can receive "any" value.
+
+The `then_` method will return a `Js.Promise.t(Js.Json.t)` value, which maps to a JS Promise containing some JSON value.
+
+When we combine these externals with `->`, we get a Reason API that looks very similar to the JS chaining API.
+
+📄 src/agent.re
+```diff
+    };
+  
+  let setToken = _token => token := Some(_token);
++ 
++ [@bs.send] external get: (client, string) => client = "";
++ [@bs.send] external use: (client, 'request => unit) => client = "";
++ [@bs.send]
++ external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
++   "then";
++ 
++ let requestGet = url =>
++   superagent->get(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
+
+```
+We can just drop the `requestGet` method into our JavaScript file and it should work the same as the previous API. If you check out the `agent.bs.js` file, you'll notice the generated output is exatly the same as the line we are replacing.
+
+📄 src/agent.js
+```diff
+- import { superagent, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
++ import { superagent, requestGet, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
+  
+  const API_ROOT = 'https://conduit.productionready.io/api';
+  
+  const requests = {
+    del: url =>
+      superagent.del(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
+-   get: url =>
+-     superagent.get(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
++   get: requestGet,
+    put: (url, body) =>
+      superagent.put(`${API_ROOT}${url}`, body).use(tokenPlugin).then(responseBody),
+    post: (url, body) =>
+
+```
+Using the same techniques as above, we can translate the `del`, `put`, and `post` methods on our `requests` object. Both `put` and `post` use a generic `'body` type - though we could use a `Js.Json.t` type, this should make it easier for us to translate the rest of the file.
+
+📄 src/agent.re
+```diff
+  let setToken = _token => token := Some(_token);
+  
+  [@bs.send] external get: (client, string) => client = "";
++ [@bs.send] external del: (client, string) => client = "";
++ [@bs.send] external put: (client, string, 'body) => client = "";
++ [@bs.send] external post: (client, string, 'body) => client = "";
+  [@bs.send] external use: (client, 'request => unit) => client = "";
+  [@bs.send]
+  external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
+  
+  let requestGet = url =>
+    superagent->get(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
++ 
++ let requestDel = url =>
++   superagent->del(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
++ 
++ let requestPut = (url, body) =>
++   superagent
++   ->put(apiRoot ++ url, body)
++   ->use(tokenPlugin)
++   ->then_(responseBody);
++ 
++ let requestPost = (url, body) =>
++   superagent
++   ->post(apiRoot ++ url, body)
++   ->use(tokenPlugin)
++   ->then_(responseBody);
+
+```
+Now, we can swap out our implementations of `del`, `put`, and `post` and clean up some (now) unused values.
+
+📄 src/agent.js
+```diff
+- import { superagent, requestGet, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
+- 
+- const API_ROOT = 'https://conduit.productionready.io/api';
++ import { requestGet, requestDel, requestPut, requestPost, setToken } from "./agent.bs.js";
+  
+  const encode = encodeURIComponent;
+  
+  const requests = {
+-   del: url =>
+-     superagent.del(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
++   del: requestDel,
+    get: requestGet,
+-   put: (url, body) =>
+-     superagent.put(`${API_ROOT}${url}`, body).use(tokenPlugin).then(responseBody),
+-   post: (url, body) =>
+-     superagent.post(`${API_ROOT}${url}`, body).use(tokenPlugin).then(responseBody)
++   put: requestPut,
++   post: requestPost,
+  };
+  
+  const Auth = {
+
+```
+The `requests` object can be removed and we can use our Reason methods directly.
+
+📄 src/agent.js
+```diff
+  
+  const encode = encodeURIComponent;
+  
+- const requests = {
+-   del: requestDel,
+-   get: requestGet,
+-   put: requestPut,
+-   post: requestPost,
+- };
+- 
+  const Auth = {
+    current: () =>
+-     requests.get('/user'),
++     requestGet('/user'),
+    login: (email, password) =>
+-     requests.post('/users/login', { user: { email, password } }),
++     requestPost('/users/login', { user: { email, password } }),
+    register: (username, email, password) =>
+-     requests.post('/users', { user: { username, email, password } }),
++     requestPost('/users', { user: { username, email, password } }),
+    save: user =>
+-     requests.put('/user', { user })
++     requestPut('/user', { user })
+  };
+  
+  const Tags = {
+-   getAll: () => requests.get('/tags')
++   getAll: () => requestGet('/tags')
+  };
+  
+  const limit = (count, p) => `limit=${count}&offset=${p ? p * count : 0}`;
+  const omitSlug = article => Object.assign({}, article, { slug: undefined })
+  const Articles = {
+    all: page =>
+-     requests.get(`/articles?${limit(10, page)}`),
++     requestGet(`/articles?${limit(10, page)}`),
+    byAuthor: (author, page) =>
+-     requests.get(`/articles?author=${encode(author)}&${limit(5, page)}`),
++     requestGet(`/articles?author=${encode(author)}&${limit(5, page)}`),
+    byTag: (tag, page) =>
+-     requests.get(`/articles?tag=${encode(tag)}&${limit(10, page)}`),
++     requestGet(`/articles?tag=${encode(tag)}&${limit(10, page)}`),
+    del: slug =>
+-     requests.del(`/articles/${slug}`),
++     requestDel(`/articles/${slug}`),
+    favorite: slug =>
+-     requests.post(`/articles/${slug}/favorite`),
++     requestPost(`/articles/${slug}/favorite`),
+    favoritedBy: (author, page) =>
+-     requests.get(`/articles?favorited=${encode(author)}&${limit(5, page)}`),
++     requestGet(`/articles?favorited=${encode(author)}&${limit(5, page)}`),
+    feed: () =>
+-     requests.get('/articles/feed?limit=10&offset=0'),
++     requestGet('/articles/feed?limit=10&offset=0'),
+    get: slug =>
+-     requests.get(`/articles/${slug}`),
++     requestGet(`/articles/${slug}`),
+    unfavorite: slug =>
+-     requests.del(`/articles/${slug}/favorite`),
++     requestDel(`/articles/${slug}/favorite`),
+    update: article =>
+-     requests.put(`/articles/${article.slug}`, { article: omitSlug(article) }),
++     requestPut(`/articles/${article.slug}`, { article: omitSlug(article) }),
+    create: article =>
+-     requests.post('/articles', { article })
++     requestPost('/articles', { article })
+  };
+  
+  const Comments = {
+    create: (slug, comment) =>
+-     requests.post(`/articles/${slug}/comments`, { comment }),
++     requestPost(`/articles/${slug}/comments`, { comment }),
+    delete: (slug, commentId) =>
+-     requests.del(`/articles/${slug}/comments/${commentId}`),
++     requestDel(`/articles/${slug}/comments/${commentId}`),
+    forArticle: slug =>
+-     requests.get(`/articles/${slug}/comments`)
++     requestGet(`/articles/${slug}/comments`)
+  };
+  
+  const Profile = {
+    follow: username =>
+-     requests.post(`/profiles/${username}/follow`),
++     requestPost(`/profiles/${username}/follow`),
+    get: username =>
+-     requests.get(`/profiles/${username}`),
++     requestGet(`/profiles/${username}`),
+    unfollow: username =>
+-     requests.del(`/profiles/${username}/follow`)
++     requestDel(`/profiles/${username}/follow`)
+  };
+  
+  export default {
+
+```
