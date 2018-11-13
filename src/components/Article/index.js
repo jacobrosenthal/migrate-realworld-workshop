@@ -8,7 +8,6 @@ import { ARTICLE_PAGE_LOADED, ARTICLE_PAGE_UNLOADED } from '../../constants/acti
 
 const mapStateToProps = state => ({
   ...state.article,
-  currentUser: state.common.currentUser
 });
 
 const mapDispatchToProps = dispatch => ({

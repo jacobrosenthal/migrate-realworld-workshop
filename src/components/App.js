@@ -61,7 +61,7 @@ class App extends React.Component {
             <Route path="/register" component={Register} />
             <Route path="/editor/:slug" component={Editor} />
             <Route path="/editor" component={Editor} />
-            <Route path="/article/:id" component={Article} />
+            <Route path="/article/:id" render={(props) => <Article {...props} currentUser={this.props.currentUser} />} />
             <Route path="/settings" component={Settings} />
             <Route path="/@:username/favorites" component={ProfileFavorites} />
             <Route path="/@:username" component={Profile} />
