@@ -23,3 +23,12 @@ let tokenPlugin = req =>
   };
 
 let setToken = _token => token := Some(_token);
+
+[@bs.send] external get: (client, string) => client = "";
+[@bs.send] external use: (client, 'request => unit) => client = "";
+[@bs.send]
+external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
+  "then";
+
+let requestGet = url =>
+  superagent->get(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
