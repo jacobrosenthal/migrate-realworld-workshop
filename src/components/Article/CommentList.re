@@ -23,3 +23,13 @@ let make = (~comments, ~slug, ~currentUser, _children) => {
          }
     </div>,
 };
+
+let default =
+  ReasonReact.wrapReasonForJs(~component, props =>
+    make(
+      ~comments=props##comments,
+      ~slug=props##slug,
+      ~currentUser=props##currentUser,
+      [||],
+    )
+  );
