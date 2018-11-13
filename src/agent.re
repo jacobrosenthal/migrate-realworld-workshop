@@ -11,6 +11,8 @@ external superagentPromise: (superagent, globalPromise) => client =
 
 let superagent = superagentPromise(superagent_, promise);
 
+let apiRoot = "https://conduit.productionready.io/api";
+
 let responseBody = res => res##body;
 
 let token = ref(None);
