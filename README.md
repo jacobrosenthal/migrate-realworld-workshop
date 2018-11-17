@@ -486,3 +486,197 @@ The `requests` object can be removed and we can use our Reason methods directly.
   export default {
 
 ```
+We're not going to finish converting the rest of this file, partly because the namespacing patterns aren't easy in Reason and partly because we want to talk about co-location refactors later.
+
+
+## ReasonReact
+
+Let's change our focus away from utility functions and look at how we can migrate React components written in JS over to Reason. We can do this using ReasonReact, which also provides some helpful utilities (like `reducerComponent`) to simplify our application.
+
+First, we'll change some of our JS patterns to improve our Reason conversion. Instead of passing the `Article` component to ReactRouter, we'll use a `render` function so we can pass `currentUser` directly to the component as a prop instead of plucking it out of the Redux store inside that component. We then remove those property mappers from our `Article` component. Side note: we should probably do this for all our components but we didn't want to pollute the diff.
+
+📄 src/components/App.js
+```diff
+              <Route path="/register" component={Register} />
+              <Route path="/editor/:slug" component={Editor} />
+              <Route path="/editor" component={Editor} />
+-             <Route path="/article/:id" component={Article} />
++             <Route path="/article/:id" render={(props) => <Article {...props} currentUser={this.props.currentUser} />} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/@:username/favorites" component={ProfileFavorites} />
+              <Route path="/@:username" component={Profile} />
+
+```
+📄 src/components/Article/index.js
+```diff
+  
+  const mapStateToProps = state => ({
+    ...state.article,
+-   currentUser: state.common.currentUser
+  });
+  
+  const mapDispatchToProps = dispatch => ({
+
+```
+Now, we'll add `reason-react` as a dependency using the `npm install -S reason-react` command. Whenever you install a Reason dependency, you must add it to the `bs-dependencies` array in your `bsconfig.json` file so the build system knows which modules to build.
+
+For JSX support, we also add the `react-jsx` transform in our `bsconfig.json` file.
+
+📄 bsconfig.json
+```diff
+    "suffix": ".bs.js",
+    "bs-dependencies": [
+      // add your dependencies here. You'd usually install them normally through `npm install my-dependency`. If my-dependency has a bsconfig.json too, then everything will work seamlessly.
++     "reason-react"
+    ],
+    "warnings": {
+      "error": "+101"
+    },
+    "namespace": true,
+-   "refmt": 3
++   "refmt": 3,
++   "reason": {
++     "react-jsx": 2
++   },
+  }
+
+```
+📄 package.json
+```diff
+      "react-router": "^4.1.2",
+      "react-router-dom": "^4.1.2",
+      "react-router-redux": "^5.0.0-alpha.6",
++     "reason-react": "^0.5.3",
+      "redux": "^3.6.0",
+      "redux-devtools-extension": "^2.13.2",
+      "redux-logger": "^3.0.1",
+
+```
+We'll start by converting a pretty straight-forward, stateless component to Reason. Since our component is stateless, we'll construct our default component with `ReasonReact.statelessComponent()`. The only argument this method needs is a string to use as a debug name - a handy trick is to always use `__MODULE__` which Reason injects as the current filename (or module name if using nested modules).
+
+In Reason, JSX compiles to the `make` method of a module, so we'll define a `make` that returns our ReasonReact component. All `props` are passed as labeled arguments, so here we define `~comments`, `~slug` and `~currentUser` - all of which are required (an optional property would look like `~token=?`). The only positional argument is `children` passed to the component, but in this case we define it as `_children` because we don't actually accept any children.
+
+For the return value, we return a record that spreads the default `component` and then we override the `render` method. `render` receives one argument `self` - sort of like `this` in JS - but we aren't using it so we named it `_self`. This is a common pattern in Reason and reduces compiler warnings about unused variables.
+
+Our `render` currently just outputs an empty `<div>` - but we'll be adding the rest from the original module next.
+
+📄 src/components/Article/CommentList.re
+```re
+let component = ReasonReact.statelessComponent(__MODULE__);
+
+let make = (~comments, ~slug, ~currentUser, _children) => {
+  ...component,
+  render: _self =>
+    <div>
+    </div>
+};
+
+```
+While converting our CommentList component, we encounter another custom component - `Comment` - but that's fine because ReasonReact allows us to wrap JS components for use in Reason.
+
+The `make` function for that component becomes a passthrough to `ReasonReact.wrapJsForReason()`, which takes:
+* A `ReasonReact.reactClass` as `~reactClass` - this will come from an `external` declaration
+* The JS props as `~props` which needs to be JS serializable
+* The children to pass - we use empty arrays for both of these but you can pass through `children` if your components accept children
+
+📄 src/components/Article/CommentList.re
+```diff
++ module Comment = {
++   [@bs.module "./Comment.js"]
++   external reactClass: ReasonReact.reactClass = "default";
++ 
++   let make = (~comment, ~currentUser, ~slug, _children) =>
++     ReasonReact.wrapJsForReason(
++       ~reactClass,
++       ~props={"comment": comment, "currentUser": currentUser, "slug": slug},
++       [||],
++     );
++ };
++ 
+  let component = ReasonReact.statelessComponent(__MODULE__);
+  
+  let make = (~comments, ~slug, ~currentUser, _children) => {
+
+```
+Now that we have a wrapper for our external React component, we can utilize Belt's `Array.map` function to map all our comments to the Comment component.
+
+Notice the `...{ }` around our map statement, the `{ }` allows us to inline statements and the `...` spreads an array as children in a DOM structure. You'll see and use this pattern a lot.
+
+📄 src/components/Article/CommentList.re
+```diff
+    ...component,
+    render: _self =>
+      <div>
+-     </div>
++       ...{
++            Belt.Array.map(comments, comment =>
++              <Comment comment currentUser slug key=comment##id />
++            )
++          }
++     </div>,
+  };
+
+```
+To use our ReasonReact component in JS, we need to utilize the `ReasonReact.wrapReasonForJS()` API and export it as `default`.
+
+This API takes:
+* The Reason component you've created as `~component`
+* A function that maps JS props to your component's `make` method while passing in the correctly converted parameters
+
+📄 src/components/Article/CommentList.re
+```diff
+           }
+      </div>,
+  };
++ 
++ let default =
++   ReasonReact.wrapReasonForJs(~component, props =>
++     make(
++       ~comments=props##comments,
++       ~slug=props##slug,
++       ~currentUser=props##currentUser,
++       [||],
++     )
++   );
+
+```
+We can now import our `CommentList.bs.js` file and remove the old `CommentList.js` file. Usage remains the same and our application should function correctly.
+
+If you have the React-DevTools installed, you'll be able to see the component named `CommentList-MigrateRealworldWorkshop`.
+
+📄 src/components/Article/CommentContainer.js
+```diff
+  import CommentInput from './CommentInput';
+- import CommentList from './CommentList';
++ import CommentList from './CommentList.bs.js';
+  import { Link } from 'react-router-dom';
+  import React from 'react';
+  
+
+```
+📄 src/components/Article/CommentList.js
+```diff
+- import Comment from './Comment';
+- import React from 'react';
+- 
+- const CommentList = props => {
+-   return (
+-     <div>
+-       {
+-         props.comments.map(comment => {
+-           return (
+-             <Comment
+-               comment={comment}
+-               currentUser={props.currentUser}
+-               slug={props.slug}
+-               key={comment.id} />
+-           );
+-         })
+-       }
+-     </div>
+-   );
+- };
+- 
+- export default CommentList;
+
+```
