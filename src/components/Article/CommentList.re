@@ -16,5 +16,10 @@ let make = (~comments, ~slug, ~currentUser, _children) => {
   ...component,
   render: _self =>
     <div>
-    </div>
+      ...{
+           Belt.Array.map(comments, comment =>
+             <Comment comment currentUser slug key=comment##id />
+           )
+         }
+    </div>,
 };
