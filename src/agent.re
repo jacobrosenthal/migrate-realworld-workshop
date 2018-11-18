@@ -56,6 +56,9 @@ module Articles = {
 };
 
 module Comments = {
+  let create = (slug, comment) =>
+    requestPost("/articles/" ++ slug ++ "/comments", {"comment": comment});
+
   let delete = (slug, commentId) =>
     requestDel("/articles/" ++ slug ++ "/comments/" ++ commentId);
 };
