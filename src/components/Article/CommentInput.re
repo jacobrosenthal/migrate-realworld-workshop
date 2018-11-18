@@ -6,7 +6,7 @@ type action =
 
 let component = ReasonReact.reducerComponent(__MODULE__);
 
-let make = (~slug, ~onSubmit, _children) => {
+let make = (~slug, ~onSubmit, ~currentUser, _children) => {
   let setBody = (evt, self) => {
     let body = ReactEvent.Form.target(evt)##value;
     self.ReasonReact.send(SetBody(body));
@@ -35,5 +35,28 @@ let make = (~slug, ~onSubmit, _children) => {
           ),
         )
       },
+    render: self =>
+      <form
+        className="card comment-form" onSubmit={self.handle(createComment)}>
+        <div className="card-block">
+          <textarea
+            className="form-control"
+            placeholder="Write a comment..."
+            value={self.state.body}
+            onChange={self.handle(setBody)}
+            rows=3
+          />
+        </div>
+        <div className="card-footer">
+          <img
+            src=currentUser##image
+            className="comment-author-img"
+            alt=currentUser##username
+          />
+          <button className="btn btn-sm btn-primary" type_="submit">
+            {ReasonReact.string("Post Comment")}
+          </button>
+        </div>
+      </form>,
   };
 };
