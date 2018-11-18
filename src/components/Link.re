@@ -1,9 +1,9 @@
 [@bs.module "react-router-dom"]
 external reactClass: ReasonReact.reactClass = "Link";
 
-let make = (~_to, ~className, children) =>
+let make = (~_to, ~className=?, children) =>
   ReasonReact.wrapJsForReason(
     ~reactClass,
-    ~props={"to": _to, "className": className},
+    ~props={"to": _to, "className": Js.Nullable.fromOption(className)},
     children,
   );
