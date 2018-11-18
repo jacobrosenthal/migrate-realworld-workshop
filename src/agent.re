@@ -50,3 +50,7 @@ let requestPost = (url, body) =>
   ->post(apiRoot ++ url, body)
   ->use(tokenPlugin)
   ->then_(responseBody);
+
+module Articles = {
+  let del = slug => requestDel("/articles/" ++ slug);
+};
