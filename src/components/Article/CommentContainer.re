@@ -1,12 +1,24 @@
 let component = ReasonReact.statelessComponent(__MODULE__);
 
-let make = (~currentUser=?, ~slug, ~comments, ~onSubmit, ~onDelete, _children) => {
+let make =
+    (
+      ~currentUser=?,
+      ~slug,
+      ~comments,
+      ~onSubmit,
+      ~onDelete,
+      ~errors=?,
+      _children,
+    ) => {
   ...component,
   render: _self =>
     switch (currentUser) {
     | Some(currentUser) =>
       <div className="col-xs-12 col-md-8 offset-md-2">
-        <div> <CommentInput slug currentUser onSubmit /> </div>
+        <div>
+          <ListErrors ?errors />
+          <CommentInput slug currentUser onSubmit />
+        </div>
         <CommentList comments slug currentUser onDelete />
       </div>
     | None =>
