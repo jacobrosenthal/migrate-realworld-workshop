@@ -54,3 +54,8 @@ let requestPost = (url, body) =>
 module Articles = {
   let del = slug => requestDel("/articles/" ++ slug);
 };
+
+module Comments = {
+  let delete = (slug, commentId) =>
+    requestDel("/articles/" ++ slug ++ "/comments/" ++ commentId);
+};
