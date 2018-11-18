@@ -5,3 +5,8 @@ type action =
   | Submit;
 
 let component = ReasonReact.reducerComponent(__MODULE__);
+
+let make = (_children) => {
+  ...component,
+  initialState: () => {body: ""},
+};
