@@ -48,4 +48,26 @@ let component = ReasonReact.reducerComponent(__MODULE__);
 let make = _children => {
   ...component,
   initialState: () => {article: None, comments: [||], errors: None},
+  reducer: (action, state) =>
+    switch (action) {
+    | Loaded(article, comments) =>
+      ReasonReact.Update({...state, article: Some(article), comments})
+    | CommentError(errors) =>
+      ReasonReact.Update({...state, errors: Some(errors)})
+    | AddComment(comment) =>
+      ReasonReact.Update({
+        ...state,
+        errors: None,
+        comments: Belt.Array.concat(state.comments, [|comment|]),
+      })
+    | DeleteComment(commentId) =>
+      ReasonReact.Update({
+        ...state,
+        errors: None,
+        comments:
+          Belt.Array.keep(state.comments, comment =>
+            comment##id !== commentId
+          ),
+      })
+    },
 };
