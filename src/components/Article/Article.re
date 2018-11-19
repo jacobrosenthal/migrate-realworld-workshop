@@ -69,7 +69,7 @@ let onCommentCreate = (result, self) =>
      })
   |> ignore;
 
-let make = (~match, _children) => {
+let make = (~match, ~currentUser=?, ~onArticleDelete, _children) => {
   ...component,
   initialState: () => {article: None, comments: [||], errors: None},
   reducer: (action, state) =>
@@ -104,4 +104,57 @@ let make = (~match, _children) => {
          Js.Promise.resolve();
        })
     |> ignore,
+  render: self =>
+    switch (self.state.article) {
+    | None => ReasonReact.null
+    | Some(article) =>
+      let canModify =
+        switch (currentUser) {
+        | Some(currentUser) =>
+          currentUser##username === article##author##username
+        | None => false
+        };
+      let markup = {"__html": marked(article##body, {"sanitize": true})};
+
+      <div className="article-page">
+        <div className="banner">
+          <div className="container">
+            <h1> {ReasonReact.string(article##title)} </h1>
+            <ArticleMeta article canModify onClickDelete=onArticleDelete />
+          </div>
+        </div>
+        <div className="container page">
+          <div className="row article-content">
+            <div className="col-xs-12">
+              <div dangerouslySetInnerHTML=markup />
+              <ul className="tag-list">
+                ...{
+                     Belt.Array.map(article##tagList, tag =>
+                       <li
+                         className="tag-default tag-pill tag-outline" key=tag>
+                         {ReasonReact.string(tag)}
+                       </li>
+                     )
+                   }
+              </ul>
+            </div>
+          </div>
+          <hr />
+          <div className="article-actions" />
+          <div className="row">
+            <CommentContainer
+              onSubmit={self.handle(onCommentCreate)}
+              onDelete=(
+                (result, commentId) =>
+                  onCommentDelete(result, commentId, self)
+              )
+              comments={self.state.comments}
+              errors=?{self.state.errors}
+              slug=match##params##id
+              ?currentUser
+            />
+          </div>
+        </div>
+      </div>;
+    },
 };
