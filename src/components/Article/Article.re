@@ -45,6 +45,8 @@ type action =
 
 let component = ReasonReact.reducerComponent(__MODULE__);
 
+[@bs.module] external marked: (string, 'options) => string = "marked";
+
 external errorToJsObj: Js.Promise.error => 'jsObj = "%identity";
 let onCommentDelete = (result, commentId, self) =>
   result
