@@ -2,9 +2,9 @@ import agent from '../agent';
 import Header from './Header';
 import React from 'react';
 import { connect } from 'react-redux';
-import { APP_LOAD, REDIRECT } from '../constants/actionTypes';
+import { APP_LOAD, REDIRECT, DELETE_ARTICLE } from '../constants/actionTypes';
 import { Route, Switch } from 'react-router-dom';
-import Article from '../components/Article';
+import Article from '../components/Article/Article.bs.js';
 import Editor from '../components/Editor';
 import Home from '../components/Home';
 import Login from '../components/Login';
@@ -27,7 +27,9 @@ const mapDispatchToProps = dispatch => ({
   onLoad: (payload, token) =>
     dispatch({ type: APP_LOAD, payload, token, skipTracking: true }),
   onRedirect: () =>
-    dispatch({ type: REDIRECT })
+    dispatch({ type: REDIRECT }),
+  onArticleDelete: (payload) =>
+    dispatch({ type: DELETE_ARTICLE, payload })
 });
 
 class App extends React.Component {
@@ -61,7 +63,7 @@ class App extends React.Component {
             <Route path="/register" component={Register} />
             <Route path="/editor/:slug" component={Editor} />
             <Route path="/editor" component={Editor} />
-            <Route path="/article/:id" render={(props) => <Article {...props} currentUser={this.props.currentUser} />} />
+            <Route path="/article/:id" render={(props) => <Article {...props} currentUser={this.props.currentUser} onArticleDelete={this.props.onArticleDelete} />} />
             <Route path="/settings" component={Settings} />
             <Route path="/@:username/favorites" component={ProfileFavorites} />
             <Route path="/@:username" component={Profile} />
