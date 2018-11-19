@@ -45,6 +45,28 @@ type action =
 
 let component = ReasonReact.reducerComponent(__MODULE__);
 
+external errorToJsObj: Js.Promise.error => 'jsObj = "%identity";
+let onCommentDelete = (result, commentId, self) =>
+  result
+  |> Js.Promise.then_(_result => {
+       self.ReasonReact.send(DeleteComment(commentId));
+       Js.Promise.resolve();
+     })
+  |> ignore;
+
+let onCommentCreate = (result, self) =>
+  result
+  |> Js.Promise.then_(result => {
+       self.ReasonReact.send(AddComment(result##comment));
+       Js.Promise.resolve();
+     })
+  |> Js.Promise.catch(error => {
+       let errors = errorToJsObj(error)##response##body##errors;
+       self.ReasonReact.send(CommentError(errors));
+       Js.Promise.resolve();
+     })
+  |> ignore;
+
 let make = (~match, _children) => {
   ...component,
   initialState: () => {article: None, comments: [||], errors: None},
