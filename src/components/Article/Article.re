@@ -158,3 +158,13 @@ let make = (~match, ~currentUser=?, ~onArticleDelete, _children) => {
       </div>;
     },
 };
+
+let default =
+  ReasonReact.wrapReasonForJs(~component, props =>
+    make(
+      ~currentUser=?Js.Nullable.toOption(props##currentUser),
+      ~match=[%bs.raw {| props.match |}],
+      ~onArticleDelete=props##onArticleDelete,
+      [||],
+    )
+  );
