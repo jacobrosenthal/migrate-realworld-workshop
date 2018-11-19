@@ -45,7 +45,7 @@ type action =
 
 let component = ReasonReact.reducerComponent(__MODULE__);
 
-let make = _children => {
+let make = (~match, _children) => {
   ...component,
   initialState: () => {article: None, comments: [||], errors: None},
   reducer: (action, state) =>
@@ -70,4 +70,14 @@ let make = _children => {
           ),
       })
     },
+  didMount: self =>
+    Js.Promise.all2((
+      Agent.Articles.get(match##params##id),
+      Agent.Comments.forArticle(match##params##id),
+    ))
+    |> Js.Promise.then_(((articleResult, commentsResult)) => {
+         self.send(Loaded(articleResult##article, commentsResult##comments));
+         Js.Promise.resolve();
+       })
+    |> ignore,
 };

@@ -30,7 +30,7 @@ let setToken = _token => token := Some(_token);
 [@bs.send] external post: (client, string, 'body) => client = "";
 [@bs.send] external use: (client, 'request => unit) => client = "";
 [@bs.send]
-external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
+external then_: (client, 'response => Js.Json.t) => Js.Promise.t('result) =
   "then";
 
 let requestGet = url =>
@@ -52,15 +52,16 @@ let requestPost = (url, body) =>
   ->then_(responseBody);
 
 module Articles = {
+  let get = slug => requestGet("/articles/" ++ slug);
   let del = slug => requestDel("/articles/" ++ slug);
 };
 
 module Comments = {
   let create = (slug, comment) =>
     requestPost("/articles/" ++ slug ++ "/comments", {"comment": comment});
-
   let delete = (slug, commentId) =>
     requestDel(
       "/articles/" ++ slug ++ "/comments/" ++ string_of_int(commentId),
     );
+  let forArticle = slug => requestGet("/articles/" ++ slug ++ "/comments");
 };
