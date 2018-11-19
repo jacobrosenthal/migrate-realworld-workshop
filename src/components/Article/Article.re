@@ -30,3 +30,17 @@ type article = {
 };
 
 type errors = Js.Dict.t(array(string));
+
+type state = {
+  article: option(article),
+  comments: array(comment),
+  errors: option(errors),
+};
+
+type action =
+  | Loaded(article, array(comment))
+  | CommentError(errors)
+  | AddComment(comment)
+  | DeleteComment(int);
+
+let component = ReasonReact.reducerComponent(__MODULE__);
