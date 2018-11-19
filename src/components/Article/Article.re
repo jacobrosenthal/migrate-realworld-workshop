@@ -44,3 +44,8 @@ type action =
   | DeleteComment(int);
 
 let component = ReasonReact.reducerComponent(__MODULE__);
+
+let make = _children => {
+  ...component,
+  initialState: () => {article: None, comments: [||], errors: None},
+};
