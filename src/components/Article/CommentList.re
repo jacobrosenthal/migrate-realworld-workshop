@@ -1,35 +1,19 @@
-module Comment = {
-  [@bs.module "./Comment.js"]
-  external reactClass: ReasonReact.reactClass = "default";
-
-  let make = (~comment, ~currentUser, ~slug, _children) =>
-    ReasonReact.wrapJsForReason(
-      ~reactClass,
-      ~props={"comment": comment, "currentUser": currentUser, "slug": slug},
-      [||],
-    );
-};
-
 let component = ReasonReact.statelessComponent(__MODULE__);
 
-let make = (~comments, ~slug, ~currentUser, _children) => {
+let make = (~comments, ~slug, ~currentUser=?, ~onDelete, _children) => {
   ...component,
   render: _self =>
     <div>
       ...{
            Belt.Array.map(comments, comment =>
-             <Comment comment currentUser slug key=comment##id />
+             <Comment
+               comment
+               ?currentUser
+               slug
+               onDelete
+               key={string_of_int(comment##id)}
+             />
            )
          }
     </div>,
 };
-
-let default =
-  ReasonReact.wrapReasonForJs(~component, props =>
-    make(
-      ~comments=props##comments,
-      ~slug=props##slug,
-      ~currentUser=props##currentUser,
-      [||],
-    )
-  );

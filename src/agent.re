@@ -60,5 +60,7 @@ module Comments = {
     requestPost("/articles/" ++ slug ++ "/comments", {"comment": comment});
 
   let delete = (slug, commentId) =>
-    requestDel("/articles/" ++ slug ++ "/comments/" ++ commentId);
+    requestDel(
+      "/articles/" ++ slug ++ "/comments/" ++ string_of_int(commentId),
+    );
 };
