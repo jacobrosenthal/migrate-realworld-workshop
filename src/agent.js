@@ -1,4 +1,4 @@
-import { superagent, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
+import { superagent, requestGet, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
 const API_ROOT = 'https://conduit.productionready.io/api';
 
 const encode = encodeURIComponent;
@@ -6,8 +6,7 @@ const encode = encodeURIComponent;
 const requests = {
   del: url =>
     superagent.del(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
-  get: url =>
-    superagent.get(`${API_ROOT}${url}`).use(tokenPlugin).then(responseBody),
+  get: requestGet,
   put: (url, body) =>
     superagent.put(`${API_ROOT}${url}`, body).use(tokenPlugin).then(responseBody),
   post: (url, body) =>
