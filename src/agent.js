@@ -1,14 +1,7 @@
-import { superagent, responseBody } from "./agent.bs.js";
+import { superagent, responseBody, tokenPlugin, setToken } from "./agent.bs.js";
 const API_ROOT = 'https://conduit.productionready.io/api';
 
 const encode = encodeURIComponent;
-
-let token = null;
-const tokenPlugin = req => {
-  if (token) {
-    req.set('authorization', `Token ${token}`);
-  }
-}
 
 const requests = {
   del: url =>
@@ -87,5 +80,5 @@ export default {
   Comments,
   Profile,
   Tags,
-  setToken: _token => { token = _token; }
+  setToken,
 };
