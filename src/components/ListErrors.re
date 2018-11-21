@@ -19,3 +19,9 @@ let make = (~errors=?, _children) => {
     | None => ReasonReact.null
     },
 };
+
+
+let default =
+  ReasonReact.wrapReasonForJs(~component, props =>
+    make(~errors=?Js.Nullable.toOption(props##errors), [||])
+  );
