@@ -26,6 +26,9 @@ let setToken = _token => token := Some(_token);
 
 
 [@bs.send] external get: (client, string) => client = "";
+[@bs.send] external del: (client, string) => client = "";
+[@bs.send] external put: (client, string, 'body) => client = "";
+[@bs.send] external post: (client, string, 'body) => client = "";
 [@bs.send] external use: (client, 'request => unit) => client = "";
 [@bs.send]
 external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
@@ -33,3 +36,18 @@ external then_: (client, 'response => Js.Json.t) => Js.Promise.t(Js.Json.t) =
 
 let requestGet = url =>
   superagent->get(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
+
+let requestDel = url =>
+  superagent->del(apiRoot ++ url)->use(tokenPlugin)->then_(responseBody);
+
+let requestPut = (url, body) =>
+  superagent
+  ->put(apiRoot ++url, body)
+  ->use(tokenPlugin)
+  ->then_(responseBody);
+
+let requestPost = (url, body) =>
+  superagent
+  ->post(apiRoot ++url, body)
+  ->use(tokenPlugin)
+  ->then_(responseBody);
