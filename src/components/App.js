@@ -20,7 +20,8 @@ const mapStateToProps = state => {
     appLoaded: state.common.appLoaded,
     appName: state.common.appName,
     currentUser: state.common.currentUser,
-    redirectTo: state.common.redirectTo
+    redirectTo: state.common.redirectTo,
+    token: state.common.token
   }};
 
 const mapDispatchToProps = dispatch => ({
@@ -56,15 +57,15 @@ class App extends React.Component {
             appName={this.props.appName}
             currentUser={this.props.currentUser} />
             <Switch>
-            <Route exact path="/" component={Home}/>
-            <Route path="/login" component={Login} />
-            <Route path="/register" component={Register} />
-            <Route path="/editor/:slug" component={Editor} />
-            <Route path="/editor" component={Editor} />
-            <Route path="/article/:id" component={Article} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/@:username/favorites" component={ProfileFavorites} />
-            <Route path="/@:username" component={Profile} />
+            <Route exact path="/" render={(props) =>  <Home {...props} appName={this.props.appName} token={this.props.token}  />} />
+            <Route path="/login" render={(props) => <Login {...props}  />} />
+            <Route path="/register" render={(props) => <Register {...props} />} />
+            <Route path="/editor/:slug" render={(props) => <Editor {...props} />} />
+            <Route path="/editor" render={(props) => <Editor {...props}  />} />
+            <Route path="/article/:id" render={(props) => <Article {...props} currentUser={this.props.currentUser} />} />
+            <Route path="/settings" render={(props) => <Settings {...props} currentUser={this.props.currentUser} />} />
+            <Route path="/@:username/favorites" render={(props) => <ProfileFavorites {...props} />} />
+            <Route path="/@:username" render={(props) => <Profile {...props}  currentUser={this.props.currentUser}/>} />
             </Switch>
         </div>
       );
