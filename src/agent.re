@@ -10,3 +10,4 @@ external superagentPromise: (superagent, globalPromise) => client = "superagent-
 [@bs.module] external superagent_: superagent = "superagent";
 
 let superagent = superagentPromise(superagent_, promise);
+let responseBody = res => res##body;
