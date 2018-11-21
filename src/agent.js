@@ -2,71 +2,64 @@ import { requestGet, requestDel, requestPut, requestPost, setToken } from "./age
 
 const encode = encodeURIComponent;
 
-const requests = {
-  del: requestDel,
-  get: requestGet,
-  put: requestPut,
-  post: requestPost
-};
-
 const Auth = {
   current: () =>
-    requests.get('/user'),
+  requestGet('/user'),
   login: (email, password) =>
-    requests.post('/users/login', { user: { email, password } }),
+    requestPost('/users/login', { user: { email, password } }),
   register: (username, email, password) =>
-    requests.post('/users', { user: { username, email, password } }),
+    requestPost('/users', { user: { username, email, password } }),
   save: user =>
-    requests.put('/user', { user })
+    requestPut('/user', { user })
 };
 
 const Tags = {
-  getAll: () => requests.get('/tags')
+  getAll: () => requestGet('/tags')
 };
 
 const limit = (count, p) => `limit=${count}&offset=${p ? p * count : 0}`;
 const omitSlug = article => Object.assign({}, article, { slug: undefined })
 const Articles = {
   all: page =>
-    requests.get(`/articles?${limit(10, page)}`),
+    requestGet(`/articles?${limit(10, page)}`),
   byAuthor: (author, page) =>
-    requests.get(`/articles?author=${encode(author)}&${limit(5, page)}`),
+    requestGet(`/articles?author=${encode(author)}&${limit(5, page)}`),
   byTag: (tag, page) =>
-    requests.get(`/articles?tag=${encode(tag)}&${limit(10, page)}`),
+    requestGet(`/articles?tag=${encode(tag)}&${limit(10, page)}`),
   del: slug =>
-    requests.del(`/articles/${slug}`),
+    requestDel(`/articles/${slug}`),
   favorite: slug =>
-    requests.post(`/articles/${slug}/favorite`),
+    requestPost(`/articles/${slug}/favorite`),
   favoritedBy: (author, page) =>
-    requests.get(`/articles?favorited=${encode(author)}&${limit(5, page)}`),
+    requestGet(`/articles?favorited=${encode(author)}&${limit(5, page)}`),
   feed: () =>
-    requests.get('/articles/feed?limit=10&offset=0'),
+    requestGet('/articles/feed?limit=10&offset=0'),
   get: slug =>
-    requests.get(`/articles/${slug}`),
+    requestGet(`/articles/${slug}`),
   unfavorite: slug =>
-    requests.del(`/articles/${slug}/favorite`),
+    requestDel(`/articles/${slug}/favorite`),
   update: article =>
-    requests.put(`/articles/${article.slug}`, { article: omitSlug(article) }),
+    requestPut(`/articles/${article.slug}`, { article: omitSlug(article) }),
   create: article =>
-    requests.post('/articles', { article })
+    requestPost('/articles', { article })
 };
 
 const Comments = {
   create: (slug, comment) =>
-    requests.post(`/articles/${slug}/comments`, { comment }),
+    requestPost(`/articles/${slug}/comments`, { comment }),
   delete: (slug, commentId) =>
-    requests.del(`/articles/${slug}/comments/${commentId}`),
+    requestDel(`/articles/${slug}/comments/${commentId}`),
   forArticle: slug =>
-    requests.get(`/articles/${slug}/comments`)
+    requestGet(`/articles/${slug}/comments`)
 };
 
 const Profile = {
   follow: username =>
-    requests.post(`/profiles/${username}/follow`),
+    requestPost(`/profiles/${username}/follow`),
   get: username =>
-    requests.get(`/profiles/${username}`),
+    requestGet(`/profiles/${username}`),
   unfollow: username =>
-    requests.del(`/profiles/${username}/follow`)
+    requestDel(`/profiles/${username}/follow`)
 };
 
 export default {
